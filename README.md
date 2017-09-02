@@ -1,6 +1,6 @@
-rate limitter buffer
+# rate limit buffer
 
-not super profiled data structure, but seems to be ok for an http router
+Not a super profiled data structure, but seems to be ok for an http router
 
     % go test -bench=. -benchmem -cpu 1,2,4,8
     BenchmarkIsRateLimitted          1000000              3131 ns/op             242 B/op          4 allocs/op
