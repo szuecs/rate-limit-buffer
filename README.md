@@ -50,24 +50,32 @@ miss leading (measuring goroutine spawn in the benchmark loop)
     ok      github.com/szuecs/rate-limit-buffer     53.970s
 
 I am unsure how to measure with benchmark correctly the concurrent
-behavior of this data structure.
+behavior of this data structure. It's clear that high contention will
+result in less throughput. 1,10,100,1000 are the number of goroutines
+working concurrently on this data. 300µs/op is ok for 1000 goroutines
+reading and writing the dataset, compared to do a proxy http call it
+is much faster and will almost never happen at this concurrency level.
 
-    # Concurrent tests: 67bb879964b58763a7ca3d429f10fe5f7bbe644c
-    % go test -bench=BenchmarkIsRateLimittedConcurrent10 -benchmem -cpu 1,2,4,8
+    # Concurrent/Contention tests: efcb5016a8a33a8f271ae9a5a527a0433ed727e4
+    % go test -bench=BenchmarkIsRateLimittedConcurrent1 -benchmem -cpu 1,2,4,8
     goos: darwin
     goarch: amd64
     pkg: github.com/szuecs/rate-limit-buffer
-    BenchmarkIsRateLimittedConcurrent10               500000              3319 ns/op             159 B/op         19 allocs/op
-    BenchmarkIsRateLimittedConcurrent10-2            1000000              2097 ns/op             159 B/op         19 allocs/op
-    BenchmarkIsRateLimittedConcurrent10-4             500000              3350 ns/op             159 B/op         19 allocs/op
-    BenchmarkIsRateLimittedConcurrent10-8            1000000              2565 ns/op             159 B/op         19 allocs/op
-    BenchmarkIsRateLimittedConcurrent100               50000             33120 ns/op            1593 B/op        199 allocs/op
-    BenchmarkIsRateLimittedConcurrent100-2            100000             21246 ns/op            1592 B/op        199 allocs/op
-    BenchmarkIsRateLimittedConcurrent100-4             30000             37877 ns/op            1593 B/op        199 allocs/op
-    BenchmarkIsRateLimittedConcurrent100-8             50000             35584 ns/op            1594 B/op        199 allocs/op
-    BenchmarkIsRateLimittedConcurrent1000               5000            315386 ns/op           15928 B/op       1990 allocs/op
-    BenchmarkIsRateLimittedConcurrent1000-2            10000            225854 ns/op           15936 B/op       1990 allocs/op
-    BenchmarkIsRateLimittedConcurrent1000-4             3000            459434 ns/op           15963 B/op       1990 allocs/op
-    BenchmarkIsRateLimittedConcurrent1000-8             5000            269482 ns/op           15974 B/op       1990 allocs/op
+    BenchmarkIsRateLimittedConcurrent1               5000000               364 ns/op              15 B/op          1 allocs/op
+    BenchmarkIsRateLimittedConcurrent1-2             5000000               319 ns/op              15 B/op          1 allocs/op
+    BenchmarkIsRateLimittedConcurrent1-4             5000000               313 ns/op              15 B/op          1 allocs/op
+    BenchmarkIsRateLimittedConcurrent1-8             5000000               332 ns/op              15 B/op          1 allocs/op
+    BenchmarkIsRateLimittedConcurrent10               500000              3383 ns/op             159 B/op         19 allocs/op
+    BenchmarkIsRateLimittedConcurrent10-2             500000              2204 ns/op             159 B/op         19 allocs/op
+    BenchmarkIsRateLimittedConcurrent10-4             500000              3325 ns/op             159 B/op         19 allocs/op
+    BenchmarkIsRateLimittedConcurrent10-8             500000              2582 ns/op             159 B/op         19 allocs/op
+    BenchmarkIsRateLimittedConcurrent100               50000             34248 ns/op            1593 B/op        199 allocs/op
+    BenchmarkIsRateLimittedConcurrent100-2            100000             21281 ns/op            1592 B/op        199 allocs/op
+    BenchmarkIsRateLimittedConcurrent100-4             50000             36870 ns/op            1593 B/op        199 allocs/op
+    BenchmarkIsRateLimittedConcurrent100-8             50000             35154 ns/op            1593 B/op        199 allocs/op
+    BenchmarkIsRateLimittedConcurrent1000               5000            319270 ns/op           15928 B/op       1990 allocs/op
+    BenchmarkIsRateLimittedConcurrent1000-2            10000            230893 ns/op           15936 B/op       1990 allocs/op
+    BenchmarkIsRateLimittedConcurrent1000-4             5000            344456 ns/op           15946 B/op       1990 allocs/op
+    BenchmarkIsRateLimittedConcurrent1000-8             3000            333466 ns/op           15996 B/op       1990 allocs/op
     PASS
-    ok      github.com/szuecs/rate-limit-buffer     35.595s
+    ok      github.com/szuecs/rate-limit-buffer     42.174s
