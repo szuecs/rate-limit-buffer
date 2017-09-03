@@ -9,14 +9,16 @@ import (
 type RateLimitter struct {
 	sync.Mutex
 	bag        map[string]*CircularBuffer
-	len        int
+	maxHits    int
 	timeWindow time.Duration
 }
 
-func NewRateLimitter(l int, t time.Duration) *RateLimitter {
+// NewRateLimitter returns a new initialized RateLimitter with maxHits is
+// the maximal number of hits per time.Duration t.
+func NewRateLimitter(maxHits int, t time.Duration) *RateLimitter {
 	return &RateLimitter{
 		bag:        make(map[string]*CircularBuffer),
-		len:        l,
+		maxHits:    maxHits,
 		timeWindow: t,
 	}
 }
@@ -26,7 +28,7 @@ func NewRateLimitter(l int, t time.Duration) *RateLimitter {
 func (rl *RateLimitter) IsRateLimitted(s string) bool {
 	rl.Lock()
 	if rl.bag[s] == nil {
-		rl.bag[s] = NewCircularBuffer(rl.len, rl.timeWindow)
+		rl.bag[s] = NewCircularBuffer(rl.maxHits, rl.timeWindow)
 	}
 	res := !rl.bag[s].Add(time.Now())
 	rl.Unlock()

@@ -101,49 +101,120 @@ func BenchmarkIsRateLimitted(b *testing.B) {
 	}
 }
 
-func BenchmarkIsRateLimittedConcurrent1(b *testing.B) {
+func BenchmarkIsRateLimittedBaseData1(b *testing.B) {
 	window := time.Second
 	rl := NewRateLimitter(10, window)
+	m := 10
+	for i := 0; i < m; i++ {
+		rl.IsRateLimitted(fmt.Sprintf("foo%d", i%m))
+	}
 
 	for n := 0; n < b.N; n++ {
-		go func(j int) {
-			rl.IsRateLimitted(fmt.Sprintf("foo%d", j))
-		}(n)
+		rl.IsRateLimitted(fmt.Sprintf("foo%d", n%m))
 	}
+}
+func BenchmarkIsRateLimittedBaseData10(b *testing.B) {
+	window := time.Second
+	rl := NewRateLimitter(10, window)
+	m := 10
+	for i := 0; i < m*m; i++ {
+		rl.IsRateLimitted(fmt.Sprintf("foo%d", i%m))
+	}
+
+	for n := 0; n < b.N; n++ {
+		rl.IsRateLimitted(fmt.Sprintf("foo%d", n%m))
+	}
+}
+func BenchmarkIsRateLimittedBaseData100(b *testing.B) {
+	window := time.Second
+	rl := NewRateLimitter(10, window)
+	m := 100
+	for i := 0; i < m*m; i++ {
+		rl.IsRateLimitted(fmt.Sprintf("foo%d", i%m))
+	}
+
+	for n := 0; n < b.N; n++ {
+		rl.IsRateLimitted(fmt.Sprintf("foo%d", n%m))
+	}
+}
+func BenchmarkIsRateLimittedBaseData1000(b *testing.B) {
+	window := time.Second
+	rl := NewRateLimitter(10, window)
+	m := 1000
+	for i := 0; i < m*m; i++ {
+		rl.IsRateLimitted(fmt.Sprintf("foo%d", i%m))
+	}
+
+	for n := 0; n < b.N; n++ {
+		rl.IsRateLimitted(fmt.Sprintf("foo%d", n%m))
+	}
+}
+
+func BenchmarkIsRateLimittedConcurrent1(b *testing.B) {
+	var wg sync.WaitGroup
+	window := time.Second
+	rl := NewRateLimitter(10, window)
+	m := 100
+
+	for i := 0; i < 1; i++ {
+		wg.Add(1)
+		go func(j int) {
+			for n := 0; n < b.N; n++ {
+				rl.IsRateLimitted(fmt.Sprintf("foo%d", (j+n)%m))
+			}
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
 }
 func BenchmarkIsRateLimittedConcurrent10(b *testing.B) {
+	var wg sync.WaitGroup
 	window := time.Second
 	rl := NewRateLimitter(10, window)
+	m := 100
 
-	for n := 0; n < b.N; n++ {
-		for i := 0; i < 10; i++ {
-			go func(j int) {
-				rl.IsRateLimitted(fmt.Sprintf("foo%d", j))
-			}(i + n)
-		}
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func(j int) {
+			for n := 0; n < b.N; n++ {
+				rl.IsRateLimitted(fmt.Sprintf("foo%d", (j+n)%m))
+			}
+			wg.Done()
+		}(i)
 	}
+	wg.Wait()
 }
 func BenchmarkIsRateLimittedConcurrent100(b *testing.B) {
+	var wg sync.WaitGroup
 	window := time.Second
 	rl := NewRateLimitter(10, window)
+	m := 100
 
-	for n := 0; n < b.N; n++ {
-		for i := 0; i < 100; i++ {
-			go func(j int) {
-				rl.IsRateLimitted(fmt.Sprintf("foo%d", j))
-			}(i + n)
-		}
+	for i := 0; i < 100; i++ {
+		wg.Add(1)
+		go func(j int) {
+			for n := 0; n < b.N; n++ {
+				rl.IsRateLimitted(fmt.Sprintf("foo%d", (j+n)%m))
+			}
+			wg.Done()
+		}(i)
 	}
+	wg.Wait()
 }
 func BenchmarkIsRateLimittedConcurrent1000(b *testing.B) {
+	var wg sync.WaitGroup
 	window := time.Second
 	rl := NewRateLimitter(10, window)
+	m := 100
 
-	for n := 0; n < b.N; n++ {
-		for i := 0; i < 1000; i++ {
-			go func(j int) {
-				rl.IsRateLimitted(fmt.Sprintf("foo%d", j))
-			}(i + n)
-		}
+	for i := 0; i < 1000; i++ {
+		wg.Add(1)
+		go func(j int) {
+			for n := 0; n < b.N; n++ {
+				rl.IsRateLimitted(fmt.Sprintf("foo%d", (j+n)%m))
+			}
+			wg.Done()
+		}(i)
 	}
+	wg.Wait()
 }

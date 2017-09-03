@@ -1,6 +1,8 @@
 # rate limit buffer
 
-Not a super profiled data structure, but seems to be ok for an http router
+Not a super profiled data structure, but seems to be ok for an http
+router. I dropped previous concurrency tests, because these were
+miss leading (measuring goroutine spawn in the benchmark loop)
 
     # 8e146dfb7ae73ae1d80c25108d64d5431c1efbe4
     % go test -bench=. -benchmem -cpu 1,2,4,8
@@ -11,24 +13,6 @@ Not a super profiled data structure, but seems to be ok for an http router
     BenchmarkIsRateLimitted-2                        1000000              1715 ns/op             243 B/op          4 allocs/op
     BenchmarkIsRateLimitted-4                        1000000              1661 ns/op             243 B/op          4 allocs/op
     BenchmarkIsRateLimitted-8                        1000000              1430 ns/op             243 B/op          4 allocs/op
-    BenchmarkIsRateLimittedConcurrent1               1000000              2136 ns/op             548 B/op          4 allocs/op
-    BenchmarkIsRateLimittedConcurrent1-2             1000000              5041 ns/op             469 B/op          3 allocs/op
-    BenchmarkIsRateLimittedConcurrent1-4             1000000              9084 ns/op             393 B/op          2 allocs/op
-    BenchmarkIsRateLimittedConcurrent1-8              500000              2685 ns/op             374 B/op          3 allocs/op
-    BenchmarkIsRateLimittedConcurrent10                30000             47515 ns/op             681 B/op         22 allocs/op
-    BenchmarkIsRateLimittedConcurrent10-2             100000             15181 ns/op             807 B/op         23 allocs/op
-    BenchmarkIsRateLimittedConcurrent10-4             200000             13900 ns/op             954 B/op         25 allocs/op
-    BenchmarkIsRateLimittedConcurrent10-8             200000              8321 ns/op            1076 B/op         26 allocs/op
-    BenchmarkIsRateLimittedConcurrent100               10000            182509 ns/op            5287 B/op        236 allocs/op
-    BenchmarkIsRateLimittedConcurrent100-2             20000             90301 ns/op            1989 B/op        202 allocs/op
-    BenchmarkIsRateLimittedConcurrent100-4             20000             70309 ns/op            2219 B/op        204 allocs/op
-    BenchmarkIsRateLimittedConcurrent100-8             20000             68141 ns/op            3735 B/op        220 allocs/op
-    BenchmarkIsRateLimittedConcurrent1000               1000           1519939 ns/op           16818 B/op       2004 allocs/op
-    BenchmarkIsRateLimittedConcurrent1000-2             2000            858816 ns/op           16561 B/op       2003 allocs/op
-    BenchmarkIsRateLimittedConcurrent1000-4             2000            826575 ns/op           20100 B/op       2039 allocs/op
-    BenchmarkIsRateLimittedConcurrent1000-8             2000            704271 ns/op           49505 B/op       2346 allocs/op
-    PASS
-    ok      github.com/szuecs/rate-limit-buffer     274.247s
 
 
     # 4879455378dd0207c7a41ec4256023562d4529cb
@@ -40,21 +24,50 @@ Not a super profiled data structure, but seems to be ok for an http router
     BenchmarkIsRateLimitted-2                        1000000              1468 ns/op             243 B/op          4 allocs/op
     BenchmarkIsRateLimitted-4                        1000000              1708 ns/op             243 B/op          4 allocs/op
     BenchmarkIsRateLimitted-8                        1000000              1405 ns/op             242 B/op          4 allocs/op
-    BenchmarkIsRateLimittedConcurrent1               1000000              2062 ns/op             548 B/op          4 allocs/op
-    BenchmarkIsRateLimittedConcurrent1-2             1000000              4720 ns/op             465 B/op          3 allocs/op
-    BenchmarkIsRateLimittedConcurrent1-4             1000000              9356 ns/op             434 B/op          2 allocs/op
-    BenchmarkIsRateLimittedConcurrent1-8             1000000             15033 ns/op             243 B/op          2 allocs/op
-    BenchmarkIsRateLimittedConcurrent10               100000             51367 ns/op            2982 B/op         27 allocs/op
-    BenchmarkIsRateLimittedConcurrent10-2             100000             16291 ns/op             692 B/op         23 allocs/op
-    BenchmarkIsRateLimittedConcurrent10-4             100000             14418 ns/op             947 B/op         25 allocs/op
-    BenchmarkIsRateLimittedConcurrent10-8             200000             11745 ns/op            1252 B/op         25 allocs/op
-    BenchmarkIsRateLimittedConcurrent100               10000            435849 ns/op            5287 B/op        236 allocs/op
-    BenchmarkIsRateLimittedConcurrent100-2             20000             82162 ns/op            1991 B/op        202 allocs/op
-    BenchmarkIsRateLimittedConcurrent100-4             30000             61462 ns/op            2176 B/op        203 allocs/op
-    BenchmarkIsRateLimittedConcurrent100-8             20000             70651 ns/op            3057 B/op        213 allocs/op
-    BenchmarkIsRateLimittedConcurrent1000               1000           1306187 ns/op           16820 B/op       2004 allocs/op
-    BenchmarkIsRateLimittedConcurrent1000-2             2000            810523 ns/op           16557 B/op       2003 allocs/op
-    BenchmarkIsRateLimittedConcurrent1000-4             2000            673209 ns/op           20582 B/op       2044 allocs/op
-    BenchmarkIsRateLimittedConcurrent1000-8             3000            718642 ns/op           40715 B/op       2254 allocs/op
+
+    # Preprovisioned data set: 67bb879964b58763a7ca3d429f10fe5f7bbe644c
+    % go test -bench=BenchmarkIsRateLimittedBaseData1 -benchmem -cpu 1,2,4,8
+    goos: darwin
+    goarch: amd64
+    pkg: github.com/szuecs/rate-limit-buffer
+    BenchmarkIsRateLimittedBaseData1                 5000000               315 ns/op              14 B/op          1 allocs/op
+    BenchmarkIsRateLimittedBaseData1-2               5000000               296 ns/op              14 B/op          1 allocs/op
+    BenchmarkIsRateLimittedBaseData1-4               5000000               290 ns/op              14 B/op          1 allocs/op
+    BenchmarkIsRateLimittedBaseData1-8               5000000               288 ns/op              14 B/op          1 allocs/op
+    BenchmarkIsRateLimittedBaseData10                5000000               319 ns/op              14 B/op          1 allocs/op
+    BenchmarkIsRateLimittedBaseData10-2              5000000               287 ns/op              14 B/op          1 allocs/op
+    BenchmarkIsRateLimittedBaseData10-4              5000000               283 ns/op              14 B/op          1 allocs/op
+    BenchmarkIsRateLimittedBaseData10-8              5000000               287 ns/op              14 B/op          1 allocs/op
+    BenchmarkIsRateLimittedBaseData100               5000000               311 ns/op              15 B/op          1 allocs/op
+    BenchmarkIsRateLimittedBaseData100-2             5000000               305 ns/op              15 B/op          1 allocs/op
+    BenchmarkIsRateLimittedBaseData100-4             5000000               299 ns/op              15 B/op          1 allocs/op
+    BenchmarkIsRateLimittedBaseData100-8             5000000               303 ns/op              15 B/op          1 allocs/op
+    BenchmarkIsRateLimittedBaseData1000              3000000               439 ns/op              21 B/op          2 allocs/op
+    BenchmarkIsRateLimittedBaseData1000-2            3000000               404 ns/op              21 B/op          2 allocs/op
+    BenchmarkIsRateLimittedBaseData1000-4            3000000               396 ns/op              21 B/op          2 allocs/op
+    BenchmarkIsRateLimittedBaseData1000-8            3000000               403 ns/op              21 B/op          2 allocs/op
     PASS
-    ok      github.com/szuecs/rate-limit-buffer     337.055s
+    ok      github.com/szuecs/rate-limit-buffer     53.970s
+
+I am unsure how to measure with benchmark correctly the concurrent
+behavior of this data structure.
+
+    # Concurrent tests: 67bb879964b58763a7ca3d429f10fe5f7bbe644c
+    % go test -bench=BenchmarkIsRateLimittedConcurrent10 -benchmem -cpu 1,2,4,8
+    goos: darwin
+    goarch: amd64
+    pkg: github.com/szuecs/rate-limit-buffer
+    BenchmarkIsRateLimittedConcurrent10               500000              3319 ns/op             159 B/op         19 allocs/op
+    BenchmarkIsRateLimittedConcurrent10-2            1000000              2097 ns/op             159 B/op         19 allocs/op
+    BenchmarkIsRateLimittedConcurrent10-4             500000              3350 ns/op             159 B/op         19 allocs/op
+    BenchmarkIsRateLimittedConcurrent10-8            1000000              2565 ns/op             159 B/op         19 allocs/op
+    BenchmarkIsRateLimittedConcurrent100               50000             33120 ns/op            1593 B/op        199 allocs/op
+    BenchmarkIsRateLimittedConcurrent100-2            100000             21246 ns/op            1592 B/op        199 allocs/op
+    BenchmarkIsRateLimittedConcurrent100-4             30000             37877 ns/op            1593 B/op        199 allocs/op
+    BenchmarkIsRateLimittedConcurrent100-8             50000             35584 ns/op            1594 B/op        199 allocs/op
+    BenchmarkIsRateLimittedConcurrent1000               5000            315386 ns/op           15928 B/op       1990 allocs/op
+    BenchmarkIsRateLimittedConcurrent1000-2            10000            225854 ns/op           15936 B/op       1990 allocs/op
+    BenchmarkIsRateLimittedConcurrent1000-4             3000            459434 ns/op           15963 B/op       1990 allocs/op
+    BenchmarkIsRateLimittedConcurrent1000-8             5000            269482 ns/op           15974 B/op       1990 allocs/op
+    PASS
+    ok      github.com/szuecs/rate-limit-buffer     35.595s
