@@ -23,9 +23,9 @@ func NewRateLimitter(maxHits int, t time.Duration) *RateLimitter {
 	}
 }
 
-// IsRateLimitted tries to add s to a circularbuffer and returns true if we have
+// IsRateLimited tries to add s to a circularbuffer and returns true if we have
 // a free bucket, if not it will return false, which means ratelimit.
-func (rl *RateLimitter) IsRateLimitted(s string) bool {
+func (rl *RateLimitter) IsRateLimited(s string) bool {
 	rl.Lock()
 	if rl.bag[s] == nil {
 		rl.bag[s] = NewCircularBuffer(rl.maxHits, rl.timeWindow)
