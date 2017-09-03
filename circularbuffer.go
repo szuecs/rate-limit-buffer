@@ -24,6 +24,24 @@ func (cb *CircularBuffer) Cap() int {
 	return len(cb.slots)
 }
 
+func (cb *CircularBuffer) Len() int {
+	n := 0
+	for i := 0; i < len(cb.slots); i++ {
+		if cb.slots[i].Add(cb.timeWindow).After(time.Now()) {
+			n++
+		}
+	}
+	return n
+}
+
+func (cb *CircularBuffer) InUse() bool {
+	newestOffset := (cb.offset - 1) % len(cb.slots)
+	if newestOffset < 0 {
+		newestOffset = len(cb.slots) + newestOffset
+	}
+	return cb.slots[newestOffset].Add(cb.timeWindow).After(time.Now())
+}
+
 // Free returns if there is space or the bucket is full for the current time.
 // Example:
 // time.Now(): 5

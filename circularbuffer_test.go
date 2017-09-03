@@ -5,6 +5,55 @@ import (
 	"time"
 )
 
+func TestLen(t *testing.T) {
+	l := 2
+	window := 1 * time.Second
+	cb := NewCircularBuffer(l, window)
+
+	if cb.Len() != 0 {
+		t.Errorf("buffer is not used expected 0, but is %v", cb.Len())
+	}
+	cb.Add(time.Now())
+	if cb.Len() != 1 {
+		t.Errorf("expected 1, but is %v", cb.Len())
+	}
+	cb.Add(time.Now())
+	if cb.Len() != 2 {
+		t.Errorf("expected 2, but is %v", cb.Len())
+	}
+	cb.Add(time.Now())
+	if cb.Len() != 2 {
+		t.Errorf("expected 2, but is %v", cb.Len())
+	}
+
+	time.Sleep(window)
+	if cb.Len() != 0 {
+		t.Errorf("expected 0, but is %v", cb.Len())
+	}
+}
+
+func TestInUse(t *testing.T) {
+	l := 2
+	window := 1 * time.Second
+	cb := NewCircularBuffer(l, window)
+	if cb.InUse() {
+		t.Errorf("buffer should not be in use")
+	}
+	cb.Add(time.Now())
+	if !cb.InUse() {
+		t.Errorf("buffer should be in use")
+	}
+	cb.Add(time.Now())
+	if !cb.InUse() {
+		t.Errorf("buffer should be in use")
+	}
+
+	time.Sleep(window)
+	if cb.InUse() {
+		t.Errorf("buffer should not be in use anymore")
+	}
+}
+
 func TestFree(t *testing.T) {
 	l := 2
 	cb := NewCircularBuffer(l, 1*time.Second)
