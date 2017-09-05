@@ -4,7 +4,7 @@
 [![GoDoc](https://godoc.org/github.com/szuecs/rate-limit-buffer?status.svg)](https://godoc.org/github.com/szuecs/rate-limit-buffer)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Go Report Card](https://goreportcard.com/badge/szuecs/rate-limit-buffer)](https://goreportcard.com/report/szuecs/rate-limit-buffer)
-[![codecov](https://codecov.io/gh/szuecs/rate-limit-buffer/branch/master/graph/badge.svg)](https://codecov.io/gh/szuecs/rate-limit-buffer)
+[![Coverage Status](https://coveralls.io/repos/github/szuecs/rate-limit-buffer/badge.svg?branch=master)](https://coveralls.io/github/szuecs/rate-limit-buffer?branch=master)
 
 Not a super profiled data structure, but seems to be ok for an http
 router. I dropped previous concurrency tests, because these were
