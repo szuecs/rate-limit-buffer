@@ -7,7 +7,7 @@ import (
 
 // RateLimiter
 type RateLimiter struct {
-	sync.Mutex
+	sync.RWMutex
 	bag        map[string]*CircularBuffer
 	maxHits    int
 	timeWindow time.Duration
@@ -28,13 +28,21 @@ func NewRateLimiter(maxHits int, d, cleanInterval time.Duration, quit chan struc
 // Allow tries to add s to a circularbuffer and returns true if we have
 // a free bucket, if not it will return false, which means ratelimit.
 func (rl *RateLimiter) Allow(s string) bool {
-	rl.Lock()
-	if rl.bag[s] == nil {
-		rl.bag[s] = NewCircularBuffer(rl.maxHits, rl.timeWindow)
+	var source *CircularBuffer
+	var present bool
+
+	rl.RLock()
+	if source, present = rl.bag[s]; !present {
+		rl.RUnlock()
+		rl.Lock()
+		source = NewCircularBuffer(rl.maxHits, rl.timeWindow)
+		rl.bag[s] = source
+		rl.Unlock()
+	} else {
+		rl.RUnlock()
 	}
-	res := rl.bag[s].Add(time.Now())
-	rl.Unlock()
-	return res
+	present = source.Add(time.Now())
+	return present
 }
 
 // DeleteOld removes old entries from state bag
