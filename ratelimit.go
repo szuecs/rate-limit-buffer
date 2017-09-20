@@ -11,6 +11,7 @@ type RateLimiter struct {
 	bag        map[string]*CircularBuffer
 	maxHits    int
 	timeWindow time.Duration
+	quitCH     chan struct{}
 }
 
 // NewRateLimiter returns a new initialized RateLimitter with maxHits is
@@ -20,8 +21,9 @@ func NewRateLimiter(maxHits int, d, cleanInterval time.Duration, quit chan struc
 		bag:        make(map[string]*CircularBuffer),
 		maxHits:    maxHits,
 		timeWindow: d,
+		quitCH:     quit,
 	}
-	go rl.startCleanerDaemon(cleanInterval, quit)
+	go rl.startCleanerDaemon(cleanInterval)
 	return rl
 }
 
@@ -56,10 +58,15 @@ func (rl *RateLimiter) DeleteOld() {
 	rl.Unlock()
 }
 
-func (rl *RateLimiter) startCleanerDaemon(d time.Duration, quit chan struct{}) {
+// Close will stop the cleanup goroutine
+func (rl *RateLimiter) Close() {
+	close(rl.quitCH)
+}
+
+func (rl *RateLimiter) startCleanerDaemon(d time.Duration) {
 	for {
 		select {
-		case <-quit:
+		case <-rl.quitCH:
 			return
 		case <-time.After(d):
 			rl.DeleteOld()

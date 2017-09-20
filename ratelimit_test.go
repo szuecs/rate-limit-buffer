@@ -12,6 +12,19 @@ func newRateLimiter(maxHits int, d time.Duration) (*RateLimiter, chan struct{}) 
 	return NewRateLimiter(maxHits, d, 5*d, q), q
 }
 
+func TestClose(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("failed to close %v", r)
+		}
+	}()
+
+	window := 1 * time.Second
+	rl, _ := newRateLimiter(5, window)
+	rl.Close()
+
+}
+
 func TestDeleteOld(t *testing.T) {
 	window := 1 * time.Second
 	rl, q := newRateLimiter(5, window)
