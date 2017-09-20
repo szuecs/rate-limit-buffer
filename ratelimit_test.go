@@ -7,9 +7,8 @@ import (
 	"time"
 )
 
-func newRateLimiter(maxHits int, d time.Duration) (*RateLimiter, chan struct{}) {
-	q := make(chan struct{})
-	return NewRateLimiter(maxHits, d, 5*d, q), q
+func newRateLimiter(maxHits int, d time.Duration) *RateLimiter {
+	return NewRateLimiter(maxHits, d, 5*d)
 }
 
 func TestClose(t *testing.T) {
@@ -20,14 +19,14 @@ func TestClose(t *testing.T) {
 	}()
 
 	window := 1 * time.Second
-	rl, _ := newRateLimiter(5, window)
+	rl := newRateLimiter(5, window)
 	rl.Close()
 
 }
 
 func TestDeleteOld(t *testing.T) {
 	window := 1 * time.Second
-	rl, q := newRateLimiter(5, window)
+	rl := newRateLimiter(5, window)
 
 	rl.Allow("foo")
 	rl.Allow("bar")
@@ -47,12 +46,12 @@ func TestDeleteOld(t *testing.T) {
 	if _, ok := rl.bag["bar"]; ok {
 		t.Errorf("bar should not be found")
 	}
-	q <- struct{}{}
+	rl.Close()
 }
 
 func TestAllow(t *testing.T) {
 	window := 1 * time.Second
-	rl, q := newRateLimiter(2, window)
+	rl := newRateLimiter(2, window)
 
 	if !rl.Allow("foo") {
 		t.Errorf("foo should not be rate limitted")
@@ -94,12 +93,12 @@ func TestAllow(t *testing.T) {
 	if rl.Allow("bar") {
 		t.Errorf("bar should be rate limitted")
 	}
-	q <- struct{}{}
+	rl.Close()
 }
 
 func TestAllowConcurrent(t *testing.T) {
 	window := 1 * time.Second
-	rl, q := newRateLimiter(2, window)
+	rl := newRateLimiter(2, window)
 	var wg sync.WaitGroup
 	wg.Add(3)
 	f := func(s string) {
@@ -132,24 +131,24 @@ func TestAllowConcurrent(t *testing.T) {
 	go f("bar")
 	go f("baz")
 	wg.Wait()
-	q <- struct{}{}
+	rl.Close()
 }
 
 func BenchmarkAllow(b *testing.B) {
 	window := 10 * time.Millisecond
-	rl, q := newRateLimiter(2, window)
+	rl := newRateLimiter(2, window)
 
 	for n := 0; n < b.N; n++ {
 		if !rl.Allow("foo") && !rl.Allow(fmt.Sprintf("foo%d", n)) {
 			b.Errorf("Failed 2nd should never be limitted")
 		}
 	}
-	q <- struct{}{}
+	rl.Close()
 }
 
 func BenchmarkAllowBaseData1(b *testing.B) {
 	window := time.Second
-	rl, q := newRateLimiter(10, window)
+	rl := newRateLimiter(10, window)
 	m := 10
 	for i := 0; i < m; i++ {
 		rl.Allow(fmt.Sprintf("foo%d", i%m))
@@ -158,11 +157,11 @@ func BenchmarkAllowBaseData1(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		rl.Allow(fmt.Sprintf("foo%d", n%m))
 	}
-	q <- struct{}{}
+	rl.Close()
 }
 func BenchmarkAllowBaseData10(b *testing.B) {
 	window := time.Second
-	rl, q := newRateLimiter(10, window)
+	rl := newRateLimiter(10, window)
 	m := 10
 	for i := 0; i < m*m; i++ {
 		rl.Allow(fmt.Sprintf("foo%d", i%m))
@@ -171,11 +170,11 @@ func BenchmarkAllowBaseData10(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		rl.Allow(fmt.Sprintf("foo%d", n%m))
 	}
-	q <- struct{}{}
+	rl.Close()
 }
 func BenchmarkAllowBaseData100(b *testing.B) {
 	window := time.Second
-	rl, q := newRateLimiter(10, window)
+	rl := newRateLimiter(10, window)
 	m := 100
 	for i := 0; i < m*m; i++ {
 		rl.Allow(fmt.Sprintf("foo%d", i%m))
@@ -184,11 +183,11 @@ func BenchmarkAllowBaseData100(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		rl.Allow(fmt.Sprintf("foo%d", n%m))
 	}
-	q <- struct{}{}
+	rl.Close()
 }
 func BenchmarkAllowBaseData1000(b *testing.B) {
 	window := time.Second
-	rl, q := newRateLimiter(10, window)
+	rl := newRateLimiter(10, window)
 	m := 1000
 	for i := 0; i < m*m; i++ {
 		rl.Allow(fmt.Sprintf("foo%d", i%m))
@@ -197,13 +196,13 @@ func BenchmarkAllowBaseData1000(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		rl.Allow(fmt.Sprintf("foo%d", n%m))
 	}
-	q <- struct{}{}
+	rl.Close()
 }
 
 func BenchmarkAllowConcurrent1(b *testing.B) {
 	var wg sync.WaitGroup
 	window := time.Second
-	rl, q := newRateLimiter(10, window)
+	rl := newRateLimiter(10, window)
 	m := 100
 
 	for i := 0; i < 1; i++ {
@@ -216,12 +215,12 @@ func BenchmarkAllowConcurrent1(b *testing.B) {
 		}(i)
 	}
 	wg.Wait()
-	q <- struct{}{}
+	rl.Close()
 }
 func BenchmarkAllowConcurrent10(b *testing.B) {
 	var wg sync.WaitGroup
 	window := time.Second
-	rl, q := newRateLimiter(10, window)
+	rl := newRateLimiter(10, window)
 	m := 100
 
 	for i := 0; i < 10; i++ {
@@ -234,12 +233,12 @@ func BenchmarkAllowConcurrent10(b *testing.B) {
 		}(i)
 	}
 	wg.Wait()
-	q <- struct{}{}
+	rl.Close()
 }
 func BenchmarkAllowConcurrent100(b *testing.B) {
 	var wg sync.WaitGroup
 	window := time.Second
-	rl, q := newRateLimiter(10, window)
+	rl := newRateLimiter(10, window)
 	m := 100
 
 	for i := 0; i < 100; i++ {
@@ -252,12 +251,12 @@ func BenchmarkAllowConcurrent100(b *testing.B) {
 		}(i)
 	}
 	wg.Wait()
-	q <- struct{}{}
+	rl.Close()
 }
 func BenchmarkAllowConcurrent1000(b *testing.B) {
 	var wg sync.WaitGroup
 	window := time.Second
-	rl, q := newRateLimiter(10, window)
+	rl := newRateLimiter(10, window)
 	m := 100
 
 	for i := 0; i < 1000; i++ {
@@ -270,14 +269,13 @@ func BenchmarkAllowConcurrent1000(b *testing.B) {
 		}(i)
 	}
 	wg.Wait()
-	q <- struct{}{}
+	rl.Close()
 }
 
 func BenchmarkAllowConcurrentAddDelete10(b *testing.B) {
 	var wg sync.WaitGroup
-	q := make(chan struct{})
 	window := time.Second
-	rl := NewRateLimiter(10, window, window, q)
+	rl := NewRateLimiter(10, window, window)
 	m := 100
 
 	for i := 0; i < 10; i++ {
@@ -290,5 +288,5 @@ func BenchmarkAllowConcurrentAddDelete10(b *testing.B) {
 		}(i)
 	}
 	wg.Wait()
-	q <- struct{}{}
+	rl.Close()
 }

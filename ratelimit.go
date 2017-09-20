@@ -16,7 +16,8 @@ type RateLimiter struct {
 
 // NewRateLimiter returns a new initialized RateLimitter with maxHits is
 // the maximal number of hits per time.Duration d.
-func NewRateLimiter(maxHits int, d, cleanInterval time.Duration, quit chan struct{}) *RateLimiter {
+func NewRateLimiter(maxHits int, d, cleanInterval time.Duration) *RateLimiter {
+	quit := make(chan struct{})
 	rl := &RateLimiter{
 		bag:        make(map[string]*CircularBuffer),
 		maxHits:    maxHits,
