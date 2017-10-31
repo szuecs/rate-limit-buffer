@@ -1,6 +1,7 @@
 package circularbuffer
 
 import (
+	"sync"
 	"testing"
 	"time"
 )
@@ -109,4 +110,35 @@ func TestAdd(t *testing.T) {
 	if cb.Add(time.Now()) {
 		t.Errorf("buffer is full Add() should return false")
 	}
+}
+
+func TestCicularBufferMassiveConcurrentUse(t *testing.T) {
+	l := 1 << 21
+	window := 1 * time.Second
+	cb := NewCircularBuffer(l, window)
+	if !cb.Add(time.Now()) {
+		t.Errorf("empty buffer Add() should return true")
+	}
+	if !cb.InUse() {
+		t.Errorf("buffer should be in use")
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(3)
+	f := func(s string) {
+		for i := 0; i < 1<<10; i++ {
+			if !cb.Add(time.Now()) {
+				t.Errorf("%s Add should return true", s)
+			}
+			if !cb.InUse() {
+				t.Errorf("%s buffer should be in use", s)
+			}
+		}
+		wg.Done()
+	}
+	go f("foo")
+	go f("bar")
+	go f("baz")
+	wg.Wait()
+
 }

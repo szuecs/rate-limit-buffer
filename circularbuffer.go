@@ -1,12 +1,14 @@
 package circularbuffer
 
 import (
+	"sync"
 	"time"
 )
 
 // CircularBuffer has slots to store times as int64 and an offset,
 // which marks the next free entry. Slots are fixed in size.
 type CircularBuffer struct {
+	sync.RWMutex
 	slots      []time.Time
 	offset     int
 	timeWindow time.Duration
@@ -27,7 +29,10 @@ func (cb *CircularBuffer) Cap() int {
 func (cb *CircularBuffer) Len() int {
 	n := 0
 	for i := 0; i < len(cb.slots); i++ {
-		if cb.slots[i].Add(cb.timeWindow).After(time.Now()) {
+		cb.RLock()
+		slot := cb.slots[i]
+		cb.RUnlock()
+		if slot.Add(cb.timeWindow).After(time.Now()) {
 			n++
 		}
 	}
@@ -39,7 +44,11 @@ func (cb *CircularBuffer) InUse() bool {
 	if newestOffset < 0 {
 		newestOffset = len(cb.slots) + newestOffset
 	}
-	return cb.slots[newestOffset].Add(cb.timeWindow).After(time.Now())
+	cb.RLock()
+	slot := cb.slots[newestOffset]
+	cb.RUnlock()
+
+	return slot.Add(cb.timeWindow).After(time.Now())
 }
 
 // Free returns if there is space or the bucket is full for the current time.
@@ -50,7 +59,10 @@ func (cb *CircularBuffer) InUse() bool {
 //          ^
 //   5-2 = 3 --> 2 free slots [1,2] are too old and are Free already
 func (cb *CircularBuffer) Free() bool {
-	return cb.slots[cb.offset].Add(cb.timeWindow).Before(time.Now())
+	cb.RLock()
+	slot := cb.slots[cb.offset]
+	cb.RUnlock()
+	return slot.Add(cb.timeWindow).Before(time.Now())
 }
 
 // Add adds an element to the next free bucket in the buffer and
@@ -68,8 +80,10 @@ func (cb *CircularBuffer) Free() bool {
 //    ^
 func (cb *CircularBuffer) Add(t time.Time) bool {
 	if cb.Free() {
+		cb.Lock()
 		cb.slots[cb.offset] = t
 		cb.offset = (cb.offset + 1) % len(cb.slots)
+		cb.Unlock()
 		return true
 	}
 	return false

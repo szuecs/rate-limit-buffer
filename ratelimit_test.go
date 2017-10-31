@@ -134,6 +134,26 @@ func TestAllowConcurrent(t *testing.T) {
 	rl.Close()
 }
 
+func TestAllowMassiveConcurrent(t *testing.T) {
+	window := 1 * time.Second
+	rl := newRateLimiter(1<<21, window)
+	var wg sync.WaitGroup
+	wg.Add(3)
+	f := func(s string) {
+		for i := 0; i < 1<<10; i++ {
+			if !rl.Allow(s) {
+				t.Errorf("%s should not be rate limitted", s)
+			}
+		}
+		wg.Done()
+	}
+	go f("foo")
+	go f("bar")
+	go f("baz")
+	wg.Wait()
+	rl.Close()
+}
+
 func BenchmarkAllow(b *testing.B) {
 	window := 10 * time.Millisecond
 	rl := newRateLimiter(2, window)
