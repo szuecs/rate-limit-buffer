@@ -32,6 +32,12 @@ get only N number requests per duration.  Client based rate limits can
 be used to slow down user/password enumeration attacks, protect DDoS
 attacks that do not fill the pipe, but your software proxy.
 
+## Upgrade v0.1.x to v0.2.y
+
+There is a breaking change, which does not break the interface.
+People that want to rate limit per string passed to "Allow(string)
+bool" have to change to ClientRateLimiter to get the same results.
+
 ## Benchmarks
 
 Not a super profiled data structure, but seems to be ok for an http
