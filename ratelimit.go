@@ -5,6 +5,29 @@ import (
 	"time"
 )
 
+// BackendRateLimiter is an interface which can be used to implement
+// rate limiting for backends ignoring the given string.
+type BackendRateLimiter interface {
+	Allow(s string) bool
+	Close()
+}
+
+// NewBackendRateLimiter returns a new initialized BackendRateLimitter
+// with maxHits is the maximal number of hits per time.Duration d.
+func NewBackendRateLimiter(maxHits int, d time.Duration) BackendRateLimiter {
+	return NewCircularBuffer(maxHits, d)
+}
+
+// Allow returns true if there is a free bucket and we should not rate
+// limit, if not it will return false, which means ratelimit.
+func (cb *CircularBuffer) Allow(s string) bool {
+	return cb.Add(time.Now())
+}
+
+// Close implements the interface to shutdown
+func (cb *CircularBuffer) Close() {
+}
+
 // RateLimiter
 type RateLimiter struct {
 	sync.RWMutex
