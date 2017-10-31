@@ -40,6 +40,61 @@ bool" have to change to ClientRateLimiter to get the same results.
 
 ## Benchmarks
 
+### v0.2.*
+
+    % go test -bench=. -benchmem -cpu 1,2,4,8 | tee -a v0.1.3.txt
+    goos: linux
+    goarch: amd64
+    pkg: github.com/szuecs/rate-limit-buffer
+    BenchmarkRateLimiterAllow                                       10000000               155 ns/op               5 B/op          0 allocs/op
+    BenchmarkRateLimiterAllow-2                                     10000000               156 ns/op               5 B/op          0 allocs/op
+    BenchmarkRateLimiterAllow-4                                     10000000               153 ns/op               5 B/op          0 allocs/op
+    BenchmarkRateLimiterAllow-8                                     10000000               152 ns/op               5 B/op          0 allocs/op
+    BenchmarkClientRateLimiterAllow                                  1000000              1545 ns/op             143 B/op          4 allocs/op
+    BenchmarkClientRateLimiterAllow-2                                1000000              1430 ns/op             143 B/op          4 allocs/op
+    BenchmarkClientRateLimiterAllow-4                                1000000              1402 ns/op             143 B/op          4 allocs/op
+    BenchmarkClientRateLimiterAllow-8                                1000000              1493 ns/op             143 B/op          4 allocs/op
+    BenchmarkClientRateLimiterAllowBaseData1                         5000000               353 ns/op              14 B/op          1 allocs/op
+    BenchmarkClientRateLimiterAllowBaseData1-2                       5000000               344 ns/op              14 B/op          1 allocs/op
+    BenchmarkClientRateLimiterAllowBaseData1-4                       5000000               334 ns/op              14 B/op          1 allocs/op
+    BenchmarkClientRateLimiterAllowBaseData1-8                       5000000               328 ns/op              14 B/op          1 allocs/op
+    BenchmarkClientRateLimiterAllowBaseData10                        5000000               354 ns/op              14 B/op          1 allocs/op
+    BenchmarkClientRateLimiterAllowBaseData10-2                      5000000               326 ns/op              14 B/op          1 allocs/op
+    BenchmarkClientRateLimiterAllowBaseData10-4                      5000000               365 ns/op              14 B/op          1 allocs/op
+    BenchmarkClientRateLimiterAllowBaseData10-8                      5000000               330 ns/op              14 B/op          1 allocs/op
+    BenchmarkClientRateLimiterAllowBaseData100                       5000000               362 ns/op              15 B/op          1 allocs/op
+    BenchmarkClientRateLimiterAllowBaseData100-2                     5000000               353 ns/op              15 B/op          1 allocs/op
+    BenchmarkClientRateLimiterAllowBaseData100-4                     5000000               338 ns/op              15 B/op          1 allocs/op
+    BenchmarkClientRateLimiterAllowBaseData100-8                     5000000               348 ns/op              15 B/op          1 allocs/op
+    BenchmarkClientRateLimiterAllowBaseData1000                      2000000               609 ns/op              24 B/op          2 allocs/op
+    BenchmarkClientRateLimiterAllowBaseData1000-2                    2000000               512 ns/op              24 B/op          2 allocs/op
+    BenchmarkClientRateLimiterAllowBaseData1000-4                    2000000               533 ns/op              24 B/op          2 allocs/op
+    BenchmarkClientRateLimiterAllowBaseData1000-8                    2000000               514 ns/op              24 B/op          2 allocs/op
+    BenchmarkClientRateLimiterAllowConcurrent1                       5000000               403 ns/op              15 B/op          1 allocs/op
+    BenchmarkClientRateLimiterAllowConcurrent1-2                     5000000               344 ns/op              15 B/op          1 allocs/op
+    BenchmarkClientRateLimiterAllowConcurrent1-4                     5000000               359 ns/op              15 B/op          1 allocs/op
+    BenchmarkClientRateLimiterAllowConcurrent1-8                     5000000               362 ns/op              15 B/op          1 allocs/op
+    BenchmarkClientRateLimiterAllowConcurrent10                       500000              3805 ns/op             159 B/op         19 allocs/op
+    BenchmarkClientRateLimiterAllowConcurrent10-2                    1000000              2190 ns/op             159 B/op         19 allocs/op
+    BenchmarkClientRateLimiterAllowConcurrent10-4                    1000000              1826 ns/op             159 B/op         19 allocs/op
+    BenchmarkClientRateLimiterAllowConcurrent10-8                    1000000              1982 ns/op             159 B/op         19 allocs/op
+    BenchmarkClientRateLimiterAllowConcurrent100                       50000             37318 ns/op            1593 B/op        199 allocs/op
+    BenchmarkClientRateLimiterAllowConcurrent100-2                     50000             28760 ns/op            1593 B/op        199 allocs/op
+    BenchmarkClientRateLimiterAllowConcurrent100-4                    100000             18575 ns/op            1593 B/op        199 allocs/op
+    BenchmarkClientRateLimiterAllowConcurrent100-8                    100000             20966 ns/op            1594 B/op        199 allocs/op
+    BenchmarkClientRateLimiterAllowConcurrent1000                       5000            350560 ns/op           15928 B/op       1990 allocs/op
+    BenchmarkClientRateLimiterAllowConcurrent1000-2                    10000            252966 ns/op           15932 B/op       1990 allocs/op
+    BenchmarkClientRateLimiterAllowConcurrent1000-4                    10000            192886 ns/op           15966 B/op       1990 allocs/op
+    BenchmarkClientRateLimiterAllowConcurrent1000-8                    10000            220237 ns/op           15973 B/op       1990 allocs/op
+    BenchmarkClientRateLimiterAllowConcurrentAddDelete10              500000              4018 ns/op             159 B/op         19 allocs/op
+    BenchmarkClientRateLimiterAllowConcurrentAddDelete10-2            500000              3018 ns/op             159 B/op         19 allocs/op
+    BenchmarkClientRateLimiterAllowConcurrentAddDelete10-4           1000000              1813 ns/op             159 B/op         19 allocs/op
+    BenchmarkClientRateLimiterAllowConcurrentAddDelete10-8            500000              2181 ns/op             159 B/op         19 allocs/op
+    PASS
+    ok      github.com/szuecs/rate-limit-buffer     124.119s
+
+### < v0.2.*
+
 Not a super profiled data structure, but seems to be ok for an http
 router. I dropped previous concurrency tests, because these were
 miss leading (measuring goroutine spawn in the benchmark loop)
