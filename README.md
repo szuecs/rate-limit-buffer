@@ -6,6 +6,34 @@
 [![Go Report Card](https://goreportcard.com/badge/szuecs/rate-limit-buffer)](https://goreportcard.com/report/szuecs/rate-limit-buffer)
 [![Coverage Status](https://coveralls.io/repos/github/szuecs/rate-limit-buffer/badge.svg?branch=master)](https://coveralls.io/github/szuecs/rate-limit-buffer?branch=master)
 
+RateLimiter is an interface you want to use in a protect your
+backend from too many calls.
+
+There are the following implementations:
+- CircularBuffer: NewRateLimiter(int, time.Duration) RateLimiter
+- ClientRateLimiter: NewClientRateLimiter(int, time.Duration) *ClientRateLimiter
+
+CircularBuffer is a rate limiter that can only protect a backend from
+maximum number of calls. It has no idea about clients or
+connections. Allow(string) will ignore the string parameter, which is
+only used by ClientRateLimiter to match the bucket of a client. This
+CircularBuffer does not need to be refilled, because it is aware of
+the oldest of call time.Time, which will be used to check the
+time.Duration passed.
+
+ClientRateLimiter implements the RateLimiter
+interface. ClientRateLimiter is a rate limit data structure with a
+simple interface and is able to do different kinds of rate limits. For
+example it can be used to do client based rate limits, where each
+client is independently counted and rate limited. The normal case in
+the literature is implemented as leaky bucket data structure, which
+can only implement the case were you want to protect your backend to
+get only N number requests per duration.  Client based rate limits can
+be used to slow down user/password enumeration attacks, protect DDoS
+attacks that do not fill the pipe, but your software proxy.
+
+## Benchmarks
+
 Not a super profiled data structure, but seems to be ok for an http
 router. I dropped previous concurrency tests, because these were
 miss leading (measuring goroutine spawn in the benchmark loop)
@@ -133,3 +161,70 @@ is much faster and will almost never happen at this concurrency level.
     BenchmarkAllowConcurrentAddDelete10-2     3425          2167          -36.73%
     BenchmarkAllowConcurrentAddDelete10-4     5709          1644          -71.20%
     BenchmarkAllowConcurrentAddDelete10-8     5133          2141          -58.29%
+
+## v0.1.2 to v0.1.3
+
+I fixed a race condition in high concurrent situations
+(go test -race -v -run=Massive .), which has a small impact on
+benchmarks. The system is slower under low concurrent with less CPUs
+and faster in high concurrent with more CPUs:
+
+    # Data collected with v0.1.2 and v0.1.3
+    % go test -bench=. -benchmem -cpu 1,2,4,8 | tee -a v0.1.3.txt
+    goos: linux
+    goarch: amd64
+    pkg: github.com/szuecs/rate-limit-buffer
+
+    # Data compare
+    % benchcmp -changed v0.1.2.txt v0.1.3.txt
+    benchmark                                 old ns/op     new ns/op     delta
+    BenchmarkAllow                            1433          1585          +10.61%
+    BenchmarkAllow-2                          1334          1386          +3.90%
+    BenchmarkAllow-4                          1317          1363          +3.49%
+    BenchmarkAllow-8                          1262          1399          +10.86%
+    BenchmarkAllowBaseData1                   340           353           +3.82%
+    BenchmarkAllowBaseData1-2                 317           325           +2.52%
+    BenchmarkAllowBaseData1-4                 320           338           +5.62%
+    BenchmarkAllowBaseData1-8                 312           333           +6.73%
+    BenchmarkAllowBaseData10                  340           355           +4.41%
+    BenchmarkAllowBaseData10-2                311           324           +4.18%
+    BenchmarkAllowBaseData10-4                312           333           +6.73%
+    BenchmarkAllowBaseData10-8                319           335           +5.02%
+    BenchmarkAllowBaseData100                 344           353           +2.62%
+    BenchmarkAllowBaseData100-2               335           337           +0.60%
+    BenchmarkAllowBaseData100-4               401           333           -16.96%
+    BenchmarkAllowBaseData100-8               323           333           +3.10%
+    BenchmarkAllowBaseData1000                525           539           +2.67%
+    BenchmarkAllowBaseData1000-2              505           511           +1.19%
+    BenchmarkAllowBaseData1000-4              501           552           +10.18%
+    BenchmarkAllowBaseData1000-8              450           517           +14.89%
+    BenchmarkAllowConcurrent1                 355           363           +2.25%
+    BenchmarkAllowConcurrent1-2               336           344           +2.38%
+    BenchmarkAllowConcurrent1-4               332           346           +4.22%
+    BenchmarkAllowConcurrent1-8               339           348           +2.65%
+    BenchmarkAllowConcurrent10                3575          3634          +1.65%
+    BenchmarkAllowConcurrent10-2              2165          2296          +6.05%
+    BenchmarkAllowConcurrent10-4              2163          1793          -17.11%
+    BenchmarkAllowConcurrent10-8              2148          1995          -7.12%
+    BenchmarkAllowConcurrent100               34943         35992         +3.00%
+    BenchmarkAllowConcurrent100-2             24132         22516         -6.70%
+    BenchmarkAllowConcurrent100-4             18392         18662         +1.47%
+    BenchmarkAllowConcurrent100-8             19484         19960         +2.44%
+    BenchmarkAllowConcurrent1000              338325        352712        +4.25%
+    BenchmarkAllowConcurrent1000-2            218878        234376        +7.08%
+    BenchmarkAllowConcurrent1000-4            184612        194888        +5.57%
+    BenchmarkAllowConcurrent1000-8            216032        215727        -0.14%
+    BenchmarkAllowConcurrentAddDelete10       3701          3687          -0.38%
+    BenchmarkAllowConcurrentAddDelete10-2     2428          2427          -0.04%
+    BenchmarkAllowConcurrentAddDelete10-4     1787          1812          +1.40%
+    BenchmarkAllowConcurrentAddDelete10-8     2059          2126          +3.25%
+
+    benchmark                          old bytes     new bytes     delta
+    BenchmarkAllow                     128           143           +11.72%
+    BenchmarkAllow-2                   127           143           +12.60%
+    BenchmarkAllow-4                   127           143           +12.60%
+    BenchmarkAllow-8                   127           143           +12.60%
+    BenchmarkAllowBaseData1000-8       21            24            +14.29%
+    BenchmarkAllowConcurrent100        1592          1593          +0.06%
+    BenchmarkAllowConcurrent1000-2     15928         15933         +0.03%
+    BenchmarkAllowConcurrent1000-8     16026         15973         -0.33%

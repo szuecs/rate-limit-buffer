@@ -40,10 +40,16 @@ func (cb *CircularBuffer) Len() int {
 }
 
 func (cb *CircularBuffer) InUse() bool {
-	newestOffset := (cb.offset - 1) % len(cb.slots)
+	cb.RLock()
+	l := len(cb.slots)
+	offset := cb.offset
+	cb.RUnlock()
+
+	newestOffset := (offset - 1) % l
 	if newestOffset < 0 {
-		newestOffset = len(cb.slots) + newestOffset
+		newestOffset = l + newestOffset
 	}
+
 	cb.RLock()
 	slot := cb.slots[newestOffset]
 	cb.RUnlock()

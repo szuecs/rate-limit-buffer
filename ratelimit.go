@@ -5,16 +5,21 @@ import (
 	"time"
 )
 
-// BackendRateLimiter is an interface which can be used to implement
-// rate limiting for backends ignoring the given string.
-type BackendRateLimiter interface {
-	Allow(s string) bool
+// RateLimiter is an interface which can be used to implement
+// rate limiting.
+type RateLimiter interface {
+	// Allow returns true if call should be allowed, false in case
+	// you should rate limit.
+	Allow(string) bool
+	// Close cleans up the RateLimiter implementation.
 	Close()
 }
 
-// NewBackendRateLimiter returns a new initialized BackendRateLimitter
-// with maxHits is the maximal number of hits per time.Duration d.
-func NewBackendRateLimiter(maxHits int, d time.Duration) BackendRateLimiter {
+// NewRateLimiter returns a new initialized RateLimitter with maxHits
+// as the maximal number of hits per time.Duration d. This can be used
+// to implement maximum number of requests for a backend to protect
+// from a known scaling limit.
+func NewRateLimiter(maxHits int, d time.Duration) RateLimiter {
 	return NewCircularBuffer(maxHits, d)
 }
 
@@ -24,12 +29,17 @@ func (cb *CircularBuffer) Allow(s string) bool {
 	return cb.Add(time.Now())
 }
 
-// Close implements the interface to shutdown
+// Close implements the RateLimiter interface to shutdown, nothing to
+// do.
 func (cb *CircularBuffer) Close() {
 }
 
-// RateLimiter
-type RateLimiter struct {
+// ClientRateLimiter implements the RateLimiter interface and does
+// rate limiting based on the the String passed to Allow(). This can
+// be used to limit per client calls to the backend. For example you
+// can slow down user enumeration or dictionary attacks to /login
+// APIs.
+type ClientRateLimiter struct {
 	sync.RWMutex
 	bag        map[string]*CircularBuffer
 	maxHits    int
@@ -39,21 +49,21 @@ type RateLimiter struct {
 
 // NewRateLimiter returns a new initialized RateLimitter with maxHits is
 // the maximal number of hits per time.Duration d.
-func NewRateLimiter(maxHits int, d, cleanInterval time.Duration) *RateLimiter {
+func NewClientRateLimiter(maxHits int, d, cleanInterval time.Duration) *ClientRateLimiter {
 	quit := make(chan struct{})
-	rl := &RateLimiter{
+	crl := &ClientRateLimiter{
 		bag:        make(map[string]*CircularBuffer),
 		maxHits:    maxHits,
 		timeWindow: d,
 		quitCH:     quit,
 	}
-	go rl.startCleanerDaemon(cleanInterval)
-	return rl
+	go crl.startCleanerDaemon(cleanInterval)
+	return crl
 }
 
 // Allow tries to add s to a circularbuffer and returns true if we have
 // a free bucket, if not it will return false, which means ratelimit.
-func (rl *RateLimiter) Allow(s string) bool {
+func (rl *ClientRateLimiter) Allow(s string) bool {
 	var source *CircularBuffer
 	var present bool
 
@@ -72,7 +82,7 @@ func (rl *RateLimiter) Allow(s string) bool {
 }
 
 // DeleteOld removes old entries from state bag
-func (rl *RateLimiter) DeleteOld() {
+func (rl *ClientRateLimiter) DeleteOld() {
 	rl.Lock()
 	for k, cb := range rl.bag {
 		if !cb.InUse() {
@@ -83,11 +93,11 @@ func (rl *RateLimiter) DeleteOld() {
 }
 
 // Close will stop the cleanup goroutine
-func (rl *RateLimiter) Close() {
+func (rl *ClientRateLimiter) Close() {
 	close(rl.quitCH)
 }
 
-func (rl *RateLimiter) startCleanerDaemon(d time.Duration) {
+func (rl *ClientRateLimiter) startCleanerDaemon(d time.Duration) {
 	for {
 		select {
 		case <-rl.quitCH:
