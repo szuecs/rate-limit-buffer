@@ -94,3 +94,15 @@ func (cb *CircularBuffer) Add(t time.Time) bool {
 	}
 	return false
 }
+
+func (cb *CircularBuffer) delta() time.Duration {
+	cb.RLock()
+	next := cb.slots[cb.offset]
+	curOff := cb.offset - 1
+	if curOff < 0 {
+		curOff += len(cb.slots)
+	}
+	cur := cb.slots[curOff]
+	cb.RUnlock()
+	return cur.Sub(next)
+}

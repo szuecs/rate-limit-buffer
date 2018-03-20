@@ -13,6 +13,7 @@ type RateLimiter interface {
 	Allow(string) bool
 	// Close cleans up the RateLimiter implementation.
 	Close()
+	Delta(string) time.Duration
 }
 
 // NewRateLimiter returns a new initialized RateLimitter with maxHits
@@ -32,6 +33,10 @@ func (cb *CircularBuffer) Allow(s string) bool {
 // Close implements the RateLimiter interface to shutdown, nothing to
 // do.
 func (cb *CircularBuffer) Close() {
+}
+
+func (cb *CircularBuffer) Delta(s string) time.Duration {
+	return cb.delta()
 }
 
 // ClientRateLimiter implements the RateLimiter interface and does
@@ -79,6 +84,17 @@ func (rl *ClientRateLimiter) Allow(s string) bool {
 	}
 	present = source.Add(time.Now())
 	return present
+}
+
+func (rl *ClientRateLimiter) Delta(s string) time.Duration {
+	rl.RLock()
+	if _, present := rl.bag[s]; !present {
+		rl.RUnlock()
+		return time.Duration(time.Hour * 24)
+	}
+	delta := rl.bag[s].delta()
+	rl.RUnlock()
+	return delta
 }
 
 // DeleteOld removes old entries from state bag
