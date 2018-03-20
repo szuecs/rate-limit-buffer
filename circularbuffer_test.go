@@ -71,6 +71,21 @@ func TestFree(t *testing.T) {
 	}
 }
 
+func TestDelta(t *testing.T) {
+	l := 4
+	window := 1 * time.Second
+	cb := NewCircularBuffer(l, window)
+	start := time.Now()
+	for i := 0; i < l; i++ {
+		cb.Add(start.Add(time.Duration(i) * window))
+	}
+	want := time.Duration(3) * window
+	delta := cb.delta()
+	if delta != want {
+		t.Errorf("want != delta => %s / %s", want, delta)
+	}
+}
+
 func TestAdd(t *testing.T) {
 	l := 4
 	window := 1 * time.Second
