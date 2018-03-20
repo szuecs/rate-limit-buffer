@@ -92,8 +92,9 @@ func (rl *ClientRateLimiter) Delta(s string) time.Duration {
 		rl.RUnlock()
 		return time.Duration(time.Hour * 24)
 	}
+	delta := rl.bag[s].delta()
 	rl.RUnlock()
-	return rl.bag[s].delta()
+	return delta
 }
 
 // DeleteOld removes old entries from state bag
