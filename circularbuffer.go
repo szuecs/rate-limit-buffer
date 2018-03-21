@@ -1,6 +1,7 @@
 package circularbuffer
 
 import (
+	"fmt"
 	"sync"
 	"time"
 )
@@ -105,4 +106,32 @@ func (cb *CircularBuffer) delta() time.Duration {
 	cur := cb.slots[curOff]
 	cb.RUnlock()
 	return cur.Sub(next)
+}
+
+// needs to be called with Lock() held by caller
+func (cb *CircularBuffer) resize(n int) {
+	if n <= 0 {
+		fmt.Printf("resize(): refusing to resize circular buffer to %d", n)
+		return
+	}
+	cur := len(cb.slots)
+	if cur == n {
+		return
+	}
+	newSlots := make([]time.Time, n, n)
+	if cur < n {
+		copy(newSlots, cb.slots)
+		cb.slots = newSlots
+	} else {
+		cb.offset = cb.offset - n
+		if cb.offset < 0 {
+			cb.offset += cur
+		}
+		for i := 0; i < n; i++ {
+			off := (cb.offset + i) % cur
+			newSlots[i] = cb.slots[off]
+		}
+		cb.slots = newSlots
+		cb.offset = n - 1
+	}
 }

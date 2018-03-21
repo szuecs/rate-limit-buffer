@@ -157,3 +157,49 @@ func TestCicularBufferMassiveConcurrentUse(t *testing.T) {
 	wg.Wait()
 
 }
+
+func TestResizeBufferIncrease(t *testing.T) {
+	l := 4
+	window := 1 * time.Second
+	cb := NewCircularBuffer(l, window)
+	start := time.Now()
+	for i := 0; i < l; i++ {
+		cb.Add(start)
+	}
+	cb.resize(2 * l)
+	for i := 0; i < l; i++ {
+		if !cb.slots[i].Equal(start) {
+			t.Errorf("invalid value found in slot %d: %s", i, cb.slots[i])
+		}
+	}
+	for i := l; i < 2*l; i++ {
+		if !cb.slots[i].IsZero() {
+			t.Errorf("invalid value found in slot %d: %s", i, cb.slots[i])
+		}
+	}
+}
+
+func TestResizeBufferDecrease(t *testing.T) {
+	l := 8
+	window := 1 * time.Second
+
+	for off := 0; off < l; off++ {
+		for newSize := 1; newSize < l; newSize++ {
+			cb := NewCircularBuffer(l, window)
+			cb.offset = off
+			start := time.Time{}
+			for i := 0; i < l; i++ {
+				cb.Add(start.Add(time.Duration(i) * window))
+			}
+			cb.resize(newSize)
+			for i := 0; i < newSize; i++ {
+				if !cb.slots[i].Equal(start.Add(window * time.Duration(l-newSize+i))) {
+					t.Errorf("invalid value found for new size %d in slot %d: %s", newSize, i, cb.slots[i])
+				}
+			}
+			if !cb.slots[cb.offset].Equal(start.Add(window * time.Duration(l-1))) {
+				t.Errorf("invalid value found for new size %d at offset %d: %s", newSize, cb.offset, cb.slots[cb.offset])
+			}
+		}
+	}
+}
