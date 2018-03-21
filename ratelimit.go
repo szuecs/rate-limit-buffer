@@ -14,6 +14,7 @@ type RateLimiter interface {
 	// Close cleans up the RateLimiter implementation.
 	Close()
 	Delta(string) time.Duration
+	Resize(string, int)
 }
 
 // NewRateLimiter returns a new initialized RateLimitter with maxHits
