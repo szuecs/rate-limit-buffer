@@ -35,8 +35,18 @@ func (cb *CircularBuffer) Allow(s string) bool {
 func (cb *CircularBuffer) Close() {
 }
 
+// Delta returns the diffence between the current and the oldest value in
+// the buffer, i.e. maxHits / Delta() => rate
 func (cb *CircularBuffer) Delta(s string) time.Duration {
 	return cb.delta()
+}
+
+// Resize resizes the circular buffer to the given size. Resizing to a size
+// <= 0 is not performed
+func (cb *CircularBuffer) Resize(s string, n int) {
+	cb.Lock()
+	cb.resize(n)
+	cb.Unlock()
 }
 
 // ClientRateLimiter implements the RateLimiter interface and does
@@ -86,6 +96,8 @@ func (rl *ClientRateLimiter) Allow(s string) bool {
 	return present
 }
 
+// Delta returns the diffence between the current and the oldest value in
+// the buffer, i.e. maxHits / Delta() => rate
 func (rl *ClientRateLimiter) Delta(s string) time.Duration {
 	rl.RLock()
 	if _, present := rl.bag[s]; !present {
@@ -95,6 +107,20 @@ func (rl *ClientRateLimiter) Delta(s string) time.Duration {
 	delta := rl.bag[s].delta()
 	rl.RUnlock()
 	return delta
+}
+
+// Resize resizes the given circular buffer to the given size. Resizing to a size
+// <= 0 is not performed
+func (rl *ClientRateLimiter) Resize(s string, n int) {
+	rl.RLock()
+	if _, present := rl.bag[s]; !present {
+		rl.RUnlock()
+		return
+	}
+	rl.RUnlock()
+	rl.Lock()
+	rl.bag[s].resize(n)
+	rl.Unlock()
 }
 
 // DeleteOld removes old entries from state bag
