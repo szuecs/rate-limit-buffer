@@ -1,6 +1,7 @@
 package circularbuffer
 
 import (
+	"math"
 	"sync"
 	"time"
 )
@@ -15,6 +16,8 @@ type RateLimiter interface {
 	Close()
 	Delta(string) time.Duration
 	Resize(string, int)
+	// RetryAfter returns how many seconds until the next allowed request
+	RetryAfter(string) int
 }
 
 // NewRateLimiter returns a new initialized RateLimitter with maxHits
@@ -48,6 +51,15 @@ func (cb *CircularBuffer) Resize(s string, n int) {
 	cb.Lock()
 	cb.resize(n)
 	cb.Unlock()
+}
+
+// RetryAfter returns how many seconds one should wait until the next request
+// is allowed.
+func (cb *CircularBuffer) RetryAfter(s string) int {
+	retryAfter := cb.retryAfter()
+	ms := retryAfter / time.Millisecond
+	secs := math.Ceil(float64(ms) / 1000)
+	return int(secs)
 }
 
 // ClientRateLimiter implements the RateLimiter interface and does
@@ -122,6 +134,19 @@ func (rl *ClientRateLimiter) Resize(s string, n int) {
 	rl.Lock()
 	rl.bag[s].resize(n)
 	rl.Unlock()
+}
+
+// RetryAfter returns how many seconds one should wait until the next request
+// is allowed.
+func (rl *ClientRateLimiter) RetryAfter(s string) int {
+	rl.RLock()
+	if _, present := rl.bag[s]; !present {
+		rl.RUnlock()
+		return 0
+	}
+	retryAfter := rl.bag[s].RetryAfter(s)
+	rl.RUnlock()
+	return retryAfter
 }
 
 // DeleteOld removes old entries from state bag

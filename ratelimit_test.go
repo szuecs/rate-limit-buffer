@@ -339,3 +339,176 @@ func BenchmarkClientRateLimiterAllowConcurrentAddDelete10(b *testing.B) {
 	wg.Wait()
 	rl.Close()
 }
+
+func TestClientRateLimiterRetryAfter(t *testing.T) {
+	l := 10
+	window := 5 * time.Second
+	rl := newClientRateLimiter(l, window)
+
+	for i := 0; i < l; i++ {
+		if rl.RetryAfter("foo") != 0 {
+			t.Errorf("shouldn't have waiting time")
+		}
+		rl.Allow("foo")
+	}
+	if rl.RetryAfter("foo") != 5 {
+		t.Errorf("should wait for the exact time window")
+	}
+	if rl.RetryAfter("bar") != 0 {
+		t.Errorf("shouldn't have waiting time")
+	}
+	rl.Close()
+}
+
+func TestClientRateLimiterRetryAfterConcurrent(t *testing.T) {
+	l := 3
+	window := 1 * time.Second
+	rl := newClientRateLimiter(l, window)
+	var wg sync.WaitGroup
+	wg.Add(3)
+	f := func(s string) {
+		if rl.RetryAfter(s) != 0 {
+			t.Errorf("%v shouldn't have waiting time", s)
+		}
+		rl.Allow(s)
+		if rl.RetryAfter(s) != 0 {
+			t.Errorf("%v shouldn't have waiting time", s)
+		}
+		rl.Allow(s)
+		if rl.RetryAfter(s) != 0 {
+			t.Errorf("%v shouldn't have waiting time", s)
+		}
+		rl.Allow(s)
+		if rl.RetryAfter(s) == 0 {
+			t.Errorf("%v should return waiting time", s)
+		}
+
+		time.Sleep(window)
+
+		if rl.RetryAfter(s) != 0 {
+			t.Errorf("%v shouldn't have waiting time", s)
+		}
+		rl.Allow(s)
+		if rl.RetryAfter(s) != 0 {
+			t.Errorf("%v shouldn't have waiting time", s)
+		}
+		rl.Allow(s)
+		if rl.RetryAfter(s) != 0 {
+			t.Errorf("%v shouldn't have waiting time", s)
+		}
+		rl.Allow(s)
+		if rl.RetryAfter(s) == 0 {
+			t.Errorf("%v should return waiting time", s)
+		}
+
+		wg.Done()
+	}
+	go f("foo")
+	go f("bar")
+	go f("baz")
+	wg.Wait()
+	rl.Close()
+}
+
+func TestClientRateLimiterRetryAfterMassiveConcurrent(t *testing.T) {
+	l := 1 << 21
+	n := 1 << 10
+	window := 1 * time.Second
+	rl := newClientRateLimiter(l, window)
+	var wg sync.WaitGroup
+	wg.Add(3)
+	f := func(s string) {
+		for i := 0; i < n; i++ {
+			if rl.RetryAfter(s) != 0 {
+				t.Errorf("%v shouldn't have waiting time", s)
+			}
+		}
+		wg.Done()
+	}
+	go f("foo")
+	go f("bar")
+	go f("baz")
+	wg.Wait()
+	rl.Close()
+}
+
+func BenchmarkClientRateLimiterRetryAfter(b *testing.B) {
+	window := 1 * time.Second
+	rl := newClientRateLimiter(1<<21, window)
+	for n := 0; n < b.N; n++ {
+		rl.RetryAfter("foo")
+	}
+	rl.Close()
+}
+
+func BenchmarkClientRateLimiterRetryAfterConcurrent1(b *testing.B) {
+	var wg sync.WaitGroup
+	window := time.Second
+	rl := newClientRateLimiter(10, window)
+	m := 100
+	for i := 0; i < 1; i++ {
+		wg.Add(1)
+		go func(j int) {
+			for n := 0; n < b.N; n++ {
+				rl.RetryAfter(fmt.Sprintf("foo%d", (j+n)%m))
+			}
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
+	rl.Close()
+}
+
+func BenchmarkClientRateLimiterRetryAfterConcurrent10(b *testing.B) {
+	var wg sync.WaitGroup
+	window := time.Second
+	rl := newClientRateLimiter(10, window)
+	m := 100
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func(j int) {
+			for n := 0; n < b.N; n++ {
+				rl.RetryAfter(fmt.Sprintf("foo%d", (j+n)%m))
+			}
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
+	rl.Close()
+}
+
+func BenchmarkClientRateLimiterRetryAfterConcurrent100(b *testing.B) {
+	var wg sync.WaitGroup
+	window := time.Second
+	rl := newClientRateLimiter(10, window)
+	m := 100
+	for i := 0; i < 100; i++ {
+		wg.Add(1)
+		go func(j int) {
+			for n := 0; n < b.N; n++ {
+				rl.RetryAfter(fmt.Sprintf("foo%d", (j+n)%m))
+			}
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
+	rl.Close()
+}
+
+func BenchmarkClientRateLimiterRetryAfterConcurrent1000(b *testing.B) {
+	var wg sync.WaitGroup
+	window := time.Second
+	rl := newClientRateLimiter(10, window)
+	m := 100
+	for i := 0; i < 1000; i++ {
+		wg.Add(1)
+		go func(j int) {
+			for n := 0; n < b.N; n++ {
+				rl.RetryAfter(fmt.Sprintf("foo%d", (j+n)%m))
+			}
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
+	rl.Close()
+}
