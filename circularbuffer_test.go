@@ -71,6 +71,21 @@ func TestFree(t *testing.T) {
 	}
 }
 
+func TestCurrent(t *testing.T) {
+	l := 2
+	window := 100 * time.Millisecond
+	cb := NewCircularBuffer(l, window)
+	start := time.Now()
+	for i := 0; i < 2*l; i++ {
+		new := start.Add(time.Duration(i) * window)
+		cb.Add(new)
+		if cb.Current() != new {
+			t.Errorf("current position should be the last one added")
+		}
+		time.Sleep(window)
+	}
+}
+
 func TestDelta(t *testing.T) {
 	l := 4
 	window := 1 * time.Second
@@ -200,6 +215,27 @@ func TestResizeBufferDecrease(t *testing.T) {
 			if !cb.slots[cb.offset].Equal(start.Add(window * time.Duration(l-1))) {
 				t.Errorf("invalid value found for new size %d at offset %d: %s", newSize, cb.offset, cb.slots[cb.offset])
 			}
+		}
+	}
+}
+
+func TestRetryAfter(t *testing.T) {
+	l := 2
+	window := 100 * time.Millisecond
+	cb := NewCircularBuffer(l, window)
+	if cb.retryAfter() != 0 {
+		t.Errorf("wait time should be zero if there are free slots")
+	}
+	start := time.Now()
+	for i := 0; i < l*10; i++ {
+		new := start.Add(time.Duration(i) * window)
+		cb.Add(new)
+		time.Sleep(10 * time.Millisecond)
+		if !cb.Free() && cb.retryAfter() == 0 {
+			t.Errorf("wait time should not be zero if there are no free slots")
+		}
+		if cb.retryAfter() < 0 {
+			t.Errorf("wait time should not be less than zero")
 		}
 	}
 }
