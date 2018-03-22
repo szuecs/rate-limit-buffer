@@ -96,16 +96,40 @@ func (cb *CircularBuffer) Add(t time.Time) bool {
 	return false
 }
 
-func (cb *CircularBuffer) delta() time.Duration {
+func (cb *CircularBuffer) Current() time.Time {
 	cb.RLock()
-	next := cb.slots[cb.offset]
 	curOff := cb.offset - 1
 	if curOff < 0 {
 		curOff += len(cb.slots)
 	}
 	cur := cb.slots[curOff]
 	cb.RUnlock()
+	return cur
+}
+
+func (cb *CircularBuffer) delta() time.Duration {
+	cb.RLock()
+	cur := cb.Current()
+	next := cb.Next()
+	cb.RUnlock()
 	return cur.Sub(next)
+}
+
+func (cb *CircularBuffer) Next() time.Time {
+	cb.RLock()
+	next := cb.slots[cb.offset]
+	cb.RUnlock()
+	return next
+}
+
+func (cb *CircularBuffer) retryAfter() time.Duration {
+	if cb.Free() {
+		return 0
+	}
+	first := cb.Next()
+	next := first.Add(cb.timeWindow)
+	now := time.Now()
+	return next.Sub(now)
 }
 
 // needs to be called with Lock() held by caller
