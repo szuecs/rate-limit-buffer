@@ -14,6 +14,7 @@ type RateLimiter interface {
 	Allow(string) bool
 	// Close cleans up the RateLimiter implementation.
 	Close()
+	Current(string) time.Time
 	Delta(string) time.Duration
 	Resize(string, int)
 	// RetryAfter returns how many seconds until the next allowed request
@@ -36,18 +37,23 @@ func (cb *CircularBuffer) Allow(s string) bool {
 
 // Close implements the RateLimiter interface to shutdown, nothing to
 // do.
-func (cb *CircularBuffer) Close() {
+func (*CircularBuffer) Close() {}
+
+// Current implements the RateLimiter interface to shutdown, nothing to
+// do.
+func (cb *CircularBuffer) Current(string) time.Time {
+	return cb.current()
 }
 
 // Delta returns the diffence between the current and the oldest value in
 // the buffer, i.e. maxHits / Delta() => rate
-func (cb *CircularBuffer) Delta(s string) time.Duration {
+func (cb *CircularBuffer) Delta(string) time.Duration {
 	return cb.delta()
 }
 
 // Resize resizes the circular buffer to the given size. Resizing to a size
 // <= 0 is not performed
-func (cb *CircularBuffer) Resize(s string, n int) {
+func (cb *CircularBuffer) Resize(_ string, n int) {
 	cb.Lock()
 	cb.resize(n)
 	cb.Unlock()
@@ -55,7 +61,7 @@ func (cb *CircularBuffer) Resize(s string, n int) {
 
 // RetryAfter returns how many seconds one should wait until the next request
 // is allowed.
-func (cb *CircularBuffer) RetryAfter(s string) int {
+func (cb *CircularBuffer) RetryAfter(string) int {
 	retryAfter := cb.retryAfter()
 	ms := retryAfter / time.Millisecond
 	secs := math.Ceil(float64(ms) / 1000)
@@ -107,6 +113,17 @@ func (rl *ClientRateLimiter) Allow(s string) bool {
 	}
 	present = source.Add(time.Now())
 	return present
+}
+
+func (rl *ClientRateLimiter) Current(s string) time.Time {
+	rl.RLock()
+	if _, present := rl.bag[s]; !present {
+		rl.RUnlock()
+		return time.Time{}
+	}
+	delta := rl.bag[s].current()
+	rl.RUnlock()
+	return delta
 }
 
 // Delta returns the diffence between the current and the oldest value in
