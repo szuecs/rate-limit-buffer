@@ -78,6 +78,26 @@ func TestClientRateLimiterDeleteOld(t *testing.T) {
 	rl.Close()
 }
 
+func TestClientRateLimiterCurrent(t *testing.T) {
+	window := 1 * time.Second
+	rl := newClientRateLimiter(2, window)
+
+	t0 := time.Now()
+	rl.Allow("foo")
+	rl.Allow("foo")
+	t1 := time.Now()
+	rl.Allow("bar")
+	rl.Allow("bar")
+	t2 := time.Now()
+
+	if rl.Current("foo").Before(t0) || rl.Current("foo").After(t1) {
+		t.Errorf("foo should be in the time frame t0 < current < t1")
+	}
+	if rl.Current("bar").Before(t1) || rl.Current("bar").After(t2) {
+		t.Errorf("bar should be in the time frame t1 < current < t2")
+	}
+}
+
 func TestClientRateLimiterAllow(t *testing.T) {
 	window := 1 * time.Second
 	rl := newClientRateLimiter(2, window)

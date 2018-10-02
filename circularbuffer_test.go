@@ -79,7 +79,7 @@ func TestCurrent(t *testing.T) {
 	for i := 0; i < 2*l; i++ {
 		new := start.Add(time.Duration(i) * window)
 		cb.Add(new)
-		if cb.Current() != new {
+		if cb.Current("") != new {
 			t.Errorf("current position should be the last one added")
 		}
 		time.Sleep(window)

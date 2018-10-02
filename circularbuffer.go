@@ -96,7 +96,7 @@ func (cb *CircularBuffer) Add(t time.Time) bool {
 	return false
 }
 
-func (cb *CircularBuffer) Current() time.Time {
+func (cb *CircularBuffer) current() time.Time {
 	cb.RLock()
 	curOff := cb.offset - 1
 	if curOff < 0 {
@@ -109,7 +109,7 @@ func (cb *CircularBuffer) Current() time.Time {
 
 func (cb *CircularBuffer) delta() time.Duration {
 	cb.RLock()
-	cur := cb.Current()
+	cur := cb.current()
 	next := cb.Next()
 	cb.RUnlock()
 	return cur.Sub(next)
