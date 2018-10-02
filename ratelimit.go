@@ -14,7 +14,7 @@ type RateLimiter interface {
 	Allow(string) bool
 	// Close cleans up the RateLimiter implementation.
 	Close()
-	Current(string) time.Time
+	Oldest(string) time.Time
 	Delta(string) time.Duration
 	Resize(string, int)
 	// RetryAfter returns how many seconds until the next allowed request
@@ -39,8 +39,15 @@ func (cb *CircularBuffer) Allow(s string) bool {
 // do.
 func (*CircularBuffer) Close() {}
 
-// Current implements the RateLimiter interface to shutdown, nothing to
-// do.
+// Oldest implements the RateLimiter interface
+func (cb *CircularBuffer) Oldest(string) time.Time {
+	cb.RLock()
+	cur := cb.slots[cb.offset]
+	cb.RUnlock()
+	return cur
+}
+
+// Current implements the RateLimiter interface
 func (cb *CircularBuffer) Current(string) time.Time {
 	return cb.current()
 }
@@ -115,13 +122,24 @@ func (rl *ClientRateLimiter) Allow(s string) bool {
 	return present
 }
 
+func (rl *ClientRateLimiter) Oldest(s string) time.Time {
+	rl.RLock()
+	if _, present := rl.bag[s]; !present {
+		rl.RUnlock()
+		return time.Time{}
+	}
+	delta := rl.bag[s].Oldest(s)
+	rl.RUnlock()
+	return delta
+}
+
 func (rl *ClientRateLimiter) Current(s string) time.Time {
 	rl.RLock()
 	if _, present := rl.bag[s]; !present {
 		rl.RUnlock()
 		return time.Time{}
 	}
-	delta := rl.bag[s].current()
+	delta := rl.bag[s].Current(s)
 	rl.RUnlock()
 	return delta
 }
