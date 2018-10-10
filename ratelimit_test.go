@@ -78,6 +78,27 @@ func TestClientRateLimiterDeleteOld(t *testing.T) {
 	rl.Close()
 }
 
+func TestClientRateLimiterOldest(t *testing.T) {
+	window := 1 * time.Second
+	rl := newClientRateLimiter(2, window) // [ , ]
+	zero := time.Time{}
+
+	if !rl.Oldest("foo").Equal(zero) { // [0, 0]
+		t.Errorf("0foo should return zero")
+	}
+
+	rl.Allow("foo") // [t0, 0]
+	if !rl.Oldest("foo").Equal(zero) {
+		t.Errorf("1foo should return zero")
+	}
+
+	t0 := rl.Current("foo")
+	rl.Allow("foo") // [t0, t1]
+	if !rl.Oldest("foo").Equal(t0) {
+		t.Errorf("2foo should return t0")
+	}
+}
+
 func TestClientRateLimiterCurrent(t *testing.T) {
 	window := 1 * time.Second
 	rl := newClientRateLimiter(2, window)
@@ -85,6 +106,7 @@ func TestClientRateLimiterCurrent(t *testing.T) {
 	t0 := time.Now()
 	rl.Allow("foo")
 	rl.Allow("foo")
+
 	t1 := time.Now()
 	rl.Allow("bar")
 	rl.Allow("bar")
