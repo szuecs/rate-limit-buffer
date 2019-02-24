@@ -1,6 +1,7 @@
 package circularbuffer
 
 import (
+	"math"
 	"sync"
 	"testing"
 	"time"
@@ -194,17 +195,19 @@ func TestResizeBufferIncrease(t *testing.T) {
 	}
 }
 
-func TestResizeBufferDecrease(t *testing.T) {
+func TestResizeBufferDecreaseFullVaryingOffset(t *testing.T) {
 	l := 8
 	window := 1 * time.Second
-
 	for off := 0; off < l; off++ {
 		for newSize := 1; newSize < l; newSize++ {
 			cb := NewCircularBuffer(l, window)
 			cb.offset = off
 			start := time.Time{}
 			for i := 0; i < l; i++ {
-				cb.Add(start.Add(time.Duration(i) * window))
+				added := cb.Add(start.Add(time.Duration(i) * window))
+				if ! added {
+					t.Errorf("%v not added", time.Duration(i)*window)
+				}
 			}
 			cb.resize(newSize)
 			for i := 0; i < newSize; i++ {
@@ -212,8 +215,67 @@ func TestResizeBufferDecrease(t *testing.T) {
 					t.Errorf("invalid value found for new size %d in slot %d: %s", newSize, i, cb.slots[i])
 				}
 			}
-			if !cb.slots[cb.offset].Equal(start.Add(window * time.Duration(l-1))) {
-				t.Errorf("invalid value found for new size %d at offset %d: %s", newSize, cb.offset, cb.slots[cb.offset])
+			if cb.offset != 0 {
+				t.Errorf("offset is not 0. Is: %d", cb.offset)
+			}
+		}
+	}
+}
+
+func TestResizeBufferDecreaseFullOverwritten(t *testing.T) {
+	for newSize := 1; newSize < 5; newSize++ {
+		for writes := 6; writes >= 10; writes++ {
+			b := NewCircularBuffer(5, 5*time.Second)
+			ts := time.Now()
+			for i := 0; i < writes; i++ {
+				b.Add(ts.Add(time.Duration(i) * time.Second))
+				time.Sleep(time.Second)
+			}
+
+			b.Resize("", newSize)
+
+			if b.Len() != 3 {
+				t.Errorf("length is not 3")
+			}
+
+			for i := 0; i < 3; i++ {
+				expectedTs := ts.Add(time.Duration(i+(writes-newSize)) * time.Second)
+				if b.slots[i] != expectedTs {
+					t.Errorf("(%d) Expected %v got %v", i, expectedTs, b.slots[i])
+				}
+			}
+			if b.offset != 0 {
+				t.Errorf("unexpected offset: %d", b.offset)
+			}
+		}
+	}
+}
+
+func TestResizeBufferDecreaseNonFull(t *testing.T) {
+	for newSize := 2; newSize < 5; newSize++ {
+		for writes := newSize + 1; writes <= 5; writes ++ {
+			b := NewCircularBuffer(5, 1*time.Minute)
+			timestamp := time.Now()
+			for i := 0; i < writes; i++ {
+				b.Add(timestamp.Add(time.Duration(i) * time.Second))
+			}
+
+			b.Resize("", newSize)
+			newLen := int(math.Min(float64(writes), float64(newSize)))
+			if b.Len() != newLen {
+				t.Errorf("length is not %d, is %d", newLen, b.Len())
+			}
+
+			for i := 0; i < newLen; i++ {
+				diff := writes - newSize
+				expected := timestamp.Add(time.Duration(diff+i) * time.Second)
+				if b.slots[i] != expected {
+					t.Errorf("unexpected time: %v expected, %v", b.slots[i].Second(), expected.Second())
+				}
+			}
+
+			if b.offset != 0 {
+				t.Errorf("unexpected offset: %d", b.offset)
 			}
 		}
 	}
