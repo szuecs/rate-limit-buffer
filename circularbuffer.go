@@ -147,15 +147,18 @@ func (cb *CircularBuffer) resize(n int) {
 		copy(newSlots, cb.slots)
 		cb.slots = newSlots
 	} else {
-		cb.offset = cb.offset - n
-		if cb.offset < 0 {
-			cb.offset += cur
+		last := (cb.offset - 1) % cur
+		if last < 0 {
+			last = last + cur
+		}
+		first := (last - (n - 1)) % cur
+		if first < 0 {
+			first = first + cur
 		}
 		for i := 0; i < n; i++ {
-			off := (cb.offset + i) % cur
-			newSlots[i] = cb.slots[off]
+			newSlots[i] = cb.slots[(first+i)%cur]
 		}
 		cb.slots = newSlots
-		cb.offset = n - 1
+		cb.offset = 0
 	}
 }
