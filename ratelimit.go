@@ -1,6 +1,7 @@
 package circularbuffer
 
 import (
+	"context"
 	"math"
 	"sync"
 	"time"
@@ -12,6 +13,11 @@ type RateLimiter interface {
 	// Allow returns true if call should be allowed, false in case
 	// you should rate limit.
 	Allow(string) bool
+
+	// AllowContext is like Allow but accepts an additional
+	// context.Context, e.g. to support OpenTracing.
+	AllowContext(context.Context, string) bool
+
 	// Close cleans up the RateLimiter implementation.
 	Close()
 	Oldest(string) time.Time
@@ -32,6 +38,12 @@ func NewRateLimiter(maxHits int, d time.Duration) RateLimiter {
 // Allow returns true if there is a free bucket and we should not rate
 // limit, if not it will return false, which means ratelimit.
 func (cb *CircularBuffer) Allow(s string) bool {
+	return cb.Add(time.Now())
+}
+
+// Allow returns true if there is a free bucket and we should not rate
+// limit, if not it will return false, which means ratelimit.
+func (cb *CircularBuffer) AllowContext(ctx context.Context, s string) bool {
 	return cb.Add(time.Now())
 }
 
@@ -105,6 +117,26 @@ func NewClientRateLimiter(maxHits int, d, cleanInterval time.Duration) *ClientRa
 // Allow tries to add s to a circularbuffer and returns true if we have
 // a free bucket, if not it will return false, which means ratelimit.
 func (rl *ClientRateLimiter) Allow(s string) bool {
+	var source *CircularBuffer
+	var present bool
+
+	rl.RLock()
+	if source, present = rl.bag[s]; !present {
+		rl.RUnlock()
+		rl.Lock()
+		source = NewCircularBuffer(rl.maxHits, rl.timeWindow)
+		rl.bag[s] = source
+		rl.Unlock()
+	} else {
+		rl.RUnlock()
+	}
+	present = source.Add(time.Now())
+	return present
+}
+
+// Allow tries to add s to a circularbuffer and returns true if we have
+// a free bucket, if not it will return false, which means ratelimit.
+func (rl *ClientRateLimiter) AllowContext(ctx context.Context, s string) bool {
 	var source *CircularBuffer
 	var present bool
 
