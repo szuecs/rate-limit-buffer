@@ -10,9 +10,9 @@ import (
 // RateLimiter is an interface which can be used to implement
 // rate limiting.
 type RateLimiter interface {
-	// AllowContext is like Allow but accepts an additional
-	// context.Context, e.g. to support OpenTracing.
-	AllowContext(context.Context, string) bool
+	// Allow is used to get a decision if you should allow the
+	// call with context to pass or to ratelimit
+	Allow(context.Context, string) bool
 
 	// Close cleans up the RateLimiter implementation.
 	Close()
@@ -33,7 +33,7 @@ func NewRateLimiter(maxHits int, d time.Duration) RateLimiter {
 
 // Allow returns true if there is a free bucket and we should not rate
 // limit, if not it will return false, which means ratelimit.
-func (cb *CircularBuffer) AllowContext(ctx context.Context, s string) bool {
+func (cb *CircularBuffer) Allow(ctx context.Context, s string) bool {
 	return cb.Add(time.Now())
 }
 
@@ -104,10 +104,10 @@ func NewClientRateLimiter(maxHits int, d, cleanInterval time.Duration) *ClientRa
 	return crl
 }
 
-// AllowContext tries to add s to a circularbuffer and returns true if we have
+// Allow tries to add s to a circularbuffer and returns true if we have
 // a free bucket, if not it will return false, which means ratelimit with an additional
 // context.Context.
-func (rl *ClientRateLimiter) AllowContext(ctx context.Context, s string) bool {
+func (rl *ClientRateLimiter) Allow(ctx context.Context, s string) bool {
 	var source *CircularBuffer
 	var present bool
 
