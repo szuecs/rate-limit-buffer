@@ -239,9 +239,9 @@ func TestResizeBufferDecreaseFullOverwritten(t *testing.T) {
 			}
 
 			for i := 0; i < 3; i++ {
-				expectedTs := ts.Add(time.Duration(i+(writes-newSize)) * time.Second)
-				if b.slots[i] != expectedTs {
-					t.Errorf("(%d) Expected %v got %v", i, expectedTs, b.slots[i])
+				expected := ts.Add(time.Duration(i+(writes-newSize)) * time.Second)
+				if b.slots[i] != expected {
+					t.Errorf("(%d) Expected %v got %v", i, expected, b.slots[i])
 				}
 			}
 			if b.offset != 0 {
