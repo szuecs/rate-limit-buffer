@@ -205,7 +205,7 @@ func TestResizeBufferDecreaseFullVaryingOffset(t *testing.T) {
 			start := time.Time{}
 			for i := 0; i < l; i++ {
 				added := cb.Add(start.Add(time.Duration(i) * window))
-				if ! added {
+				if !added {
 					t.Errorf("%v not added", time.Duration(i)*window)
 				}
 			}
@@ -253,7 +253,7 @@ func TestResizeBufferDecreaseFullOverwritten(t *testing.T) {
 
 func TestResizeBufferDecreaseNonFull(t *testing.T) {
 	for newSize := 2; newSize < 5; newSize++ {
-		for writes := newSize + 1; writes <= 5; writes ++ {
+		for writes := newSize + 1; writes <= 5; writes++ {
 			b := NewCircularBuffer(5, 1*time.Minute)
 			timestamp := time.Now()
 			for i := 0; i < writes; i++ {
