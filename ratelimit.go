@@ -90,7 +90,7 @@ type ClientRateLimiter struct {
 	quitCH     chan struct{}
 }
 
-// NewRateLimiter returns a new initialized RateLimitter with maxHits is
+// NewClientRateLimiter returns a new initialized ClientRateLimiter with maxHits is
 // the maximal number of hits per time.Duration d.
 func NewClientRateLimiter(maxHits int, d, cleanInterval time.Duration) *ClientRateLimiter {
 	quit := make(chan struct{})
