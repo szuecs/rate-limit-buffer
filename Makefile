@@ -25,3 +25,11 @@ vet: $(SOURCES) ## run Go vet
 # -ST1020 too many wrong comments on exported functions to fix right away
 staticcheck: $(SOURCES) ## run staticcheck
 	staticcheck -checks "all" ./...
+
+.PHONY: check-fmt
+check-fmt: $(SOURCES) ## check format code
+        @if [ "$$(gofmt -s -d $(SOURCES))" != "" ]; then false; else true; fi
+
+.PHONY: check-race
+check-race: build ## run all tests with race checker
+        go test -race ./...
