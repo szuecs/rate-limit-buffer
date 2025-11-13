@@ -31,5 +31,5 @@ check-fmt: $(SOURCES) ## check format code
 	@if [ "$$(gofmt -s -d $(SOURCES))" != "" ]; then false; else true; fi
 
 .PHONY: check-race
-check-race: build ## run all tests with race checker
+check-race: lib ## run all tests with race checker
 	go test -race ./...
