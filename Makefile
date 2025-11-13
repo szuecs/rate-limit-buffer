@@ -11,6 +11,10 @@ help: ## Display this help
 lib: $(SOURCES) ## build  library
 	go build ./...
 
+.PHONY: deps
+deps: ## install dependencies to run everything
+	go env
+	@go install honnef.co/go/tools/cmd/staticcheck@latest
 
 .PHONY: lint
 lint: vet staticcheck ## run all linters
